@@ -26,16 +26,16 @@ systemctl stop firewalld
 systemctl disable firewalld
 
 apt -y install dnsutils wget unzip zip curl tar
-green "======================="
-yellow "请输入域名(每个域名每周只能使用5次，安装失败也算次数，可以换不同的域名解决）"
-green "======================="
+green  " ======================="
+yellow " 请输入域名(每个域名每周只能使用5次，安装失败也算次数，可以换不同的域名解决）"
+green  " ======================="
 read your_domain
 real_addr=`ping ${your_domain} -c 1 | sed '1{s/[^(]*(//;s/).*//;q}'`
 local_addr=`curl ipv4.icanhazip.com`
 if [ $real_addr == $local_addr ] ; then
-	green "=========================================="
-	green "域名正常解析，开始安装nginx并申请证书"
-	green "=========================================="
+	green " =========================================="
+	green " 域名正常解析，开始安装nginx并申请证书"
+	green " =========================================="
 	sleep 1s
 	apt install -y nginx
 	systemctl enable nginx.service
@@ -122,70 +122,70 @@ EOF
 	chmod +x /etc/systemd/system/trojan.service
 	systemctl start trojan
 	systemctl enable trojan
-	green "========================================================================="
-	green "简介：debian一键安装trojan"
-    green "系统：>=debian9"
-    green "Youtube：米月"
-    green "电报群：https://t.me/mi_yue"
-    green "Youtube频道地址：https://www.youtube.com/channel/UCr4HCEgaZ0cN5_7tLHS_xAg"
-	green "========================================================================="
-	green "Trojan已安装完成，复制下面的信息，在OP里进行配置"
-	red   "服务器地址：${your_domain}"
-	red   "服务器端口：443"
-	red   "服务器密码：${trojan_passwd}"
-	red   "忘记密码修改文件：/usr/src/trojan/server.conf"
-	green "========================================================================="
+	green " ========================================================================="
+	green " 简介：debian一键安装trojan"
+    green " 系统：>=debian9"
+    green " Youtube：米月"
+    green " 电报群：https://t.me/mi_yue"
+    green " Youtube频道地址：https://www.youtube.com/channel/UCr4HCEgaZ0cN5_7tLHS_xAg"
+	green " ========================================================================="
+	green " Trojan已安装完成，复制下面的信息，在OP里进行配置"
+	red   " 服务器地址：${your_domain}"
+	red   " 服务器端口：443"
+	red   " 服务器密码：${trojan_passwd}"
+	red   " 忘记密码修改文件：/usr/src/trojan/server.conf"
+	green " ========================================================================="
 	else
-    red "================================"
-	red "证书申请失败，trojan安装失败"
-	red "================================"
+    red " ================================"
+	red " 证书申请失败，trojan安装失败"
+	red " ================================"
 	fi
 	
 else
-	red "================================"
-	red "域名地址解析与VPS IP地址不一致"
-	red "安装失败，请确保域名正常解析"
-	red "================================"
+	red " ================================"
+	red " 域名地址解析与VPS IP地址不一致"
+	red " 安装失败，请确保域名正常解析"
+	red " ================================"
 fi
 }
 
 function remove_trojan(){
-    red "================================"
-    red "开始卸载trojan"
-    red "开始卸载nginx"
-    red "================================"
+    red " ================================"
+    red " 开始卸载trojan"
+    red " 开始卸载nginx"
+    red " ================================"
     systemctl stop trojan
     systemctl disable trojan
     rm -f /etc/systemd/system/trojan.service
     yum remove -y nginx
     rm -rf /usr/src/trojan*
     rm -rf /var/www/html/*
-    green "=============="
-    green "trojan卸载完成"
-	green "nginx卸载完成"
-    green "=============="
+    green " =============="
+    green " trojan卸载完成"
+	green " nginx卸载完成"
+    green " =============="
 }
 
 function bbr(){
-    red "================================"
-    red "开始安装BBR"
-    red "================================"
+    red " ================================"
+    red " 开始安装BBR"
+    red " ================================"
     echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
 	echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
 	sysctl -p
-    green "=============="
-    green "BBR安装完毕"
-    green "=============="
+    green " =============="
+    green " BBR安装完毕"
+    green " =============="
 }
 
 start_menu(){
     clear
     green " ========================================================================"
-    green "简介：debian一键安装trojan"
-    green "系统：>=debian9"
-    green "Youtube：米月"
-    green "电报群：https://t.me/mi_yue"
-    green "Youtube频道地址：https://www.youtube.com/channel/UCr4HCEgaZ0cN5_7tLHS_xAg"
+    green " 简介：debian一键安装trojan"
+    green " 系统：>=debian9"
+    green " Youtube：米月"
+    green " 电报群：https://t.me/mi_yue"
+    green " Youtube频道地址：https://www.youtube.com/channel/UCr4HCEgaZ0cN5_7tLHS_xAg"
     green " ========================================================================"
     echo
     green  " 1. 一键安装trojan"
@@ -193,7 +193,7 @@ start_menu(){
 	green  " 3. 一键安装BBR"
     yellow " 0. 退出脚本"
     echo
-    read -p "请输入数字:" num
+    read -p " 请输入数字:" num
     case "$num" in
     1)
     install_trojan
