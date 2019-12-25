@@ -25,7 +25,6 @@ function install_trojan(){
 systemctl stop firewalld
 systemctl disable firewalld
 apt-get update -y
-apt-get install -y curl
 apt -y install dnsutils wget unzip zip curl tar
 green  " ============================================================================"
 yellow " 请输入域名(每个域名每周只能使用5次，安装失败也算次数，可以换不同的域名解决）"
