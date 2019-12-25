@@ -26,9 +26,9 @@ systemctl stop firewalld
 systemctl disable firewalld
 
 apt -y install dnsutils wget unzip zip curl tar
-green  " ======================="
+green  " ============================================================================"
 yellow " 请输入域名(每个域名每周只能使用5次，安装失败也算次数，可以换不同的域名解决）"
-green  " ======================="
+green  " ============================================================================"
 read your_domain
 real_addr=`ping ${your_domain} -c 1 | sed '1{s/[^(]*(//;s/).*//;q}'`
 local_addr=`curl ipv4.icanhazip.com`
@@ -136,46 +136,44 @@ EOF
 	red   " 忘记密码修改文件：/usr/src/trojan/server.conf"
 	green " ========================================================================="
 	else
-    red " ================================"
+    red " =================================="
 	red " 证书申请失败，trojan安装失败"
-	red " ================================"
+	red " =================================="
 	fi
 	
 else
-	red " ================================"
+	red " =================================="
 	red " 域名地址解析与VPS IP地址不一致"
 	red " 安装失败，请确保域名正常解析"
-	red " ================================"
+	red " =================================="
 fi
 }
 
 function remove_trojan(){
-    red " ================================"
-    red " 开始卸载trojan"
-    red " 开始卸载nginx"
-    red " ================================"
+    red " =================================="
+    red " trojan & nginx开始卸载"
+    red " =================================="
     systemctl stop trojan
     systemctl disable trojan
     rm -f /etc/systemd/system/trojan.service
     yum remove -y nginx
     rm -rf /usr/src/trojan*
     rm -rf /var/www/html/*
-    green " =============="
-    green " trojan卸载完成"
-	green " nginx卸载完成"
-    green " =============="
+    red " =================================="
+    red " trojan & nginx卸载完成"
+    red " =================================="
 }
 
-function bbr(){
-    red " ================================"
-    red " 开始安装BBR"
-    red " ================================"
+function install_bbr(){
+    green " ================================"
+    green " 开始安装BBR"
+    green " ================================"
     echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
 	echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
 	sysctl -p
-    green " =============="
-    green " BBR安装完毕"
-    green " =============="
+    green " ================================"
+    green " BBR安装完成"
+    green " ================================"
 }
 
 start_menu(){
@@ -189,8 +187,8 @@ start_menu(){
     green " ========================================================================"
     echo
     green  " 1. 一键安装trojan"
-    red    " 2. 卸载trojan"
-	green  " 3. 一键安装BBR"
+	green  " 2. 一键安装BBR"
+	red    " 3. 卸载trojan"
     yellow " 0. 退出脚本"
     echo
     read -p " 请输入数字:" num
@@ -199,10 +197,10 @@ start_menu(){
     install_trojan
     ;;
     2)
-    remove_trojan 
+    install_bbr
     ;;
 	3)
-    bbr 
+    remove_trojan 
     ;;
     0)
     exit 1
