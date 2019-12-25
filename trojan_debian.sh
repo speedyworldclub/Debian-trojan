@@ -42,7 +42,7 @@ if [ $real_addr == $local_addr ] ; then
 	#设置伪装站点
 	rm -rf /var/www/html/*
 	cd /var/www/html/
-	wget https://raw.githubusercontent.com/pzwsquare/trojan-wiz/master/web.zip
+	wget https://github.com/pzwsquare/trojan/raw/master/web.zip
     	unzip web.zip
 	systemctl start nginx.service
 	#申请证书
