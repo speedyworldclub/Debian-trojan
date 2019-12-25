@@ -187,8 +187,8 @@ start_menu(){
     green " ========================================================================"
     echo
     green  " 1. 一键安装trojan"
-	green  " 2. 一键安装BBR"
-	red    " 3. 卸载trojan"
+    green  " 2. 一键安装BBR"
+    red    " 3. 卸载trojan"
     yellow " 0. 退出脚本"
     echo
     read -p " 请输入数字:" num
@@ -199,7 +199,7 @@ start_menu(){
     2)
     install_bbr
     ;;
-	3)
+    3)
     remove_trojan 
     ;;
     0)
