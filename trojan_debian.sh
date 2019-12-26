@@ -22,8 +22,6 @@ byellow(){
 
 
 function install_trojan(){
-systemctl stop firewalld
-systemctl disable firewalld
 apt-get -y update
 apt -y install dnsutils wget unzip zip curl tar
 green  " ============================================================================"
