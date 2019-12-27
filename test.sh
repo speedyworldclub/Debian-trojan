@@ -22,10 +22,10 @@ byellow(){
 
 
 function install_trojan(){
-apt update && apt upgrade -y
+apt update && apt dist-upgrade -y
 cp /etc/apt/sources.list /etc/apt/sources.list.bak
 sed  -i 's/stretch/buster/g' /etc/apt/sources.list
-apt update && apt upgrade -y
+apt update && apt dist-upgrade -y
 apt -y install dnsutils wget unzip zip curl tar
 green  " ============================================================================"
 yellow " 请输入域名(每个域名每周只能使用5次，安装失败也算次数，可以换不同的域名解决）"
