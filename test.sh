@@ -667,20 +667,17 @@ while true; do
   echo
   green  " 1. 一键安装trojan"
   green  " 2. 一键更新trojan"
-  red    " 3. 卸载trojan"
-  yellow " 0. 退出脚本"
+  red    " 3. 一键卸载trojan"
+  yellow " 0. 退出安装trojan"
   echo
 
-  read -p "Enter selection [0-9] > "
+  read -p "请输入数字[0-3] > "
 
   if [[ $REPLY =~ ^[0-3]$ ]]; then
     case $REPLY in
       1)
         userinput
         osdist
-        green  " ===================="
-		yellow " 开始更新系统软件list"
-		green  " ===================="
         updatesystem
         green  " ==============="
 		yellow " 开始安装dnsmasq"
@@ -698,7 +695,9 @@ while true; do
         then
         :
         else 
-        colorEcho ${ERROR} "Resolve error,Please check your domain DNS config and vps firewall !"
+		green  " =========================="
+		red " 请检查域名和vps的地址是否一致"
+		green  " =========================="
         exit -1
         clear
         fi
@@ -717,12 +716,12 @@ while true; do
         green  " ============"
 		yellow " 开始安装acme"
 		green  " ============"
-        #installacme
+        installacme
         clear
         green  " ============"
 		yellow " 开始申请证书"
 		green  " ============"
-        #issuecert
+        issuecert
         green  " ==================="
 		yellow " 开始nginx配置trojan"
 		green  " ==================="
@@ -730,11 +729,11 @@ while true; do
         green  " ================"
 		yellow " 开始安装安装证书"
 		green  " ================"
-        #installcert
+        installcert
         green  " ============"
 		yellow " 开始配置证书"
 		green  " ============"
-        #installkey
+        installkey
         green  " =============="
 		yellow " 开始配置trojan"
 		green  " =============="
@@ -751,7 +750,7 @@ while true; do
         green  " ==========================="
 		yellow " 开始安装bbr"
 		green  " ==========================="
-        #tcp-bbr
+        tcp-bbr
 		green " ========================================================================="
 		green " 简介：debian一键安装trojan"
 		green " 系统：>=debian9"
