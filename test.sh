@@ -71,12 +71,12 @@ read domain
 green  " ========================================="
 yellow " 请输入密码(这个是配置trojan的密码，牢记）"
 green  " ========================================="
-read password
-  if [[ -z "$password" ]]; then
+read passwordd
+  if [[ -z "$passwordd" ]]; then
 	green  " ======================================================="
 	yellow " 密码不能为空，请重新输入(这个是配置trojan的密码，牢记）"
 	green  " ========================================================"
-    read password
+    read passwordd
   fi
 }
 ###############linux系统检查####################
@@ -190,16 +190,39 @@ issuecert(){
 server {
     listen       80;
     server_name  $domain;
-
+    #charset koi8-r;
+    #access_log  /var/log/nginx/host.access.log  main;
     location / {
         root   /usr/share/nginx/html;
         index  index.html index.htm;
     }
-
+    #error_page  404              /404.html;
+    # redirect server error pages to the static page /50x.html
+    #
     error_page   500 502 503 504  /50x.html;
     location = /50x.html {
         root   /usr/share/nginx/html;
     }
+    # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+    #
+    #location ~ \.php$ {
+    #    proxy_pass   http://127.0.0.1;
+    #}
+    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+    #
+    #location ~ \.php$ {
+    #    root           html;
+    #    fastcgi_pass   127.0.0.1:9000;
+    #    fastcgi_index  index.php;
+    #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+    #    include        fastcgi_params;
+    #}
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
 }
 EOF
   wget https://raw.githubusercontent.com/pzwsquare/trojan/master/web.zip
@@ -224,6 +247,7 @@ installkey(){
 }
 ##################################################
 changepasswd(){
+  openssl dhparam -out /etc/trojan/trojan.pem 2048
   cat > '/usr/local/etc/trojan/config.json' << EOF
 {
     "run_type": "server",
@@ -232,7 +256,7 @@ changepasswd(){
     "remote_addr": "127.0.0.1",
     "remote_port": 80,
     "password": [
-        "password"
+        "passwordd"
     ],
     "log_level": 1,
     "ssl": {
@@ -269,7 +293,7 @@ changepasswd(){
     }
 }
 EOF
-  sed  -i "s/password/$password/g" /usr/local/etc/trojan/config.json
+  sed  -i "s/passwordd/$passwordd/g" /usr/local/etc/trojan/config.json
 }
 ########在nginx配置trojan##############
 nginxtrojan(){
@@ -717,7 +741,6 @@ while true; do
 		yellow " 开始安装acme"
 		green  " ============"
         installacme
-        clear
         green  " ============"
 		yellow " 开始申请证书"
 		green  " ============"
@@ -745,8 +768,7 @@ while true; do
 		green  " ==========================="
 		yellow " 开始安装iptables-persistent"
 		green  " ==========================="
-        iptables-persistent
-        clear   
+        iptables-persistent  
         green  " ==========================="
 		yellow " 开始安装bbr"
 		green  " ==========================="
@@ -761,7 +783,7 @@ while true; do
 		green " Trojan已安装完成，复制下面的信息，在OP里进行配置"
 		red   " 服务器地址：$domain"
 		red   " 服务器端口：443"
-		red   " 服务器密码：$password"
+		red   " 服务器密码：$passwordd"
 		red   " 忘记密码修改文件：/usr/local/etc/trojan/config.json"
 		green " ========================================================================="
         break
