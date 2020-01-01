@@ -7,10 +7,8 @@ function red()    { echo -e "\033[31m\033[01m $1 \033[0m"; }
 
 
 
-mirrorsite="acccoc.top/gwd"
 
-smartdns_arm64="https://github.com/pymumu/smartdns/releases/download/Release28/smartdns.1.2019.12.15-1028.aarch64-debian-all.deb"
-smartdns_amd64="https://github.com/pymumu/smartdns/releases/download/Release28/smartdns.1.2019.12.15-1028.x86_64-debian-all.deb"
+
 
 ariang="https://github.com/mayswind/AriaNg/releases/download/1.1.4/AriaNg-1.1.4-AllInOne.zip"
 
@@ -20,13 +18,9 @@ case $(uname -m) in
     aarch64)  architecture="arm64" ;;
 esac
 
-statusuccess=$(green "[ OK ]")
-statusfailed=$(red "[ failed ]")
 
 
 function preinstall(){
-rm -rf /usr/local/bin/ui-testbaidu
-rm -rf /usr/local/bin/ui-testgoogle
 rm -rf /etc/wireguard/cprivatekey
 rm -rf /etc/wireguard/cpublickey
 rm -rf /usr/lib/resolvconf/*
@@ -34,26 +28,22 @@ rm -rf /etc/unbound/unbound.conf
 apt purge -y unbound
 rm -rf /lib/systemd/system/unbound.service
 rm -rf /etc/systemd/system/unbound.service
+apt autoremove -y
 systemctl daemon-reload > /dev/null 2>&1
 
-rm -rf ~/doh*
-rm -rf ~/vtrui*
+rm -rf ~/*
 systemctl stop iptables-proxy > /dev/null 2>&1
 
+rm -rf /etc/resolv.conf
+
 cat > /etc/resolv.conf << EOF
-nameserver 223.5.5.5
-nameserver 223.6.6.6
 nameserver 119.29.29.29
 nameserver 119.28.28.28
+nameserver 223.5.5.5
+nameserver 223.6.6.6
 EOF
 
-if [[ $(cat /etc/dnsmasq.conf) =~ "5390" ]]; then
-cat > /etc/dnsmasq.conf << EOF
-conf-dir=/etc/dnsmasq.d
-EOF
-pihole restartdns > /dev/null 2>&1
-systemctl stop pihole-FTL > /dev/null 2>&1
-fi
+
 
 date -s "$(wget -qSO- --max-redirect=0 baidu.com 2>&1 | grep Date: | cut -d' ' -f5-8)Z"
 hwclock -w
@@ -154,233 +144,7 @@ fi
 
 systemctl mask --now systemd-resolved > /dev/null 2>&1
 systemctl daemon-reload > /dev/null 2>&1
-rm -rf /run/resolvconf/interface/systemd-resolved
 }
-
-
-
-function installdoh(){
-cd ~
-systemctl stop doh-client > /dev/null 2>&1
-
-doh=$domain
-domainip=$(nslookup $domain | awk '/Address/' | awk 'NR==2{print}' | cut -d ' ' -f2)
-
-sed -i "1i $domainip $doh" /etc/hosts
-
-if [[ $architecture = "arm64" ]]; then
-  wget -O ~/doh.zip https://$mirrorsite/doharm64.zip
-elif [[ $architecture = "amd64" ]]; then
-  wget -O ~/doh.zip https://$mirrorsite/dohamd64.zip
-fi
-unzip doh.zip
-mv -f ~/doh/doh-client /usr/local/bin/doh-client
-rm -rf ~/doh*
-chmod +x /usr/local/bin/doh-client
-
-mkdir -p /etc/dns-over-https/
-cat > /etc/dns-over-https/doh-client.conf << EOF
-listen = [ "127.0.0.1:5380", ]
-[upstream]
-upstream_selector = "weighted_round_robin"
-# DoH1
-[[upstream.upstream_ietf]]
-    url = "https://xxx.ooo/dq"
-    weight = 50
-# DoH2
-[[upstream.upstream_ietf]]
-    url = "https://xxx.ooo/dq"
-    weight = 50
-[others]
-timeout = 30
-no_cookies = true
-no_ecs = true
-no_ipv6 = true
-verbose = false
-EOF
-
-doh_upstream='url = "https:\/\/'$doh'\/dq"'
-sed -i "/url/c\\$doh_upstream" /etc/dns-over-https/doh-client.conf
-
-mkdir -p /etc/NetworkManager/dispatcher.d/
-cat > /etc/NetworkManager/dispatcher.d/doh-client << "EOF"
-#!/bin/bash
-case "$2" in
-    up)
-        /usr/bin/systemctl is-active doh-client.service > /dev/null && /usr/bin/systemctl restart doh-client.service
-        ;;
-    down)
-        /usr/bin/systemctl is-active doh-client.service > /dev/null && /usr/bin/systemctl restart doh-client.service
-        ;;
-    *)
-        exit 0
-        ;;
-esac
-EOF
-chmod +x /etc/NetworkManager/dispatcher.d/doh-client
-
-cat > /etc/systemd/system/doh-client.service << "EOF"
-[Unit]
-Description=DNS-over-HTTPS Client
-After=network-online.target
-Before=nss-lookup.target
-Wants=network-online.target
-[Service]
-Type=simple
-PIDFile=/run/doh-client.pid
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-ExecStart=/usr/local/bin/doh-client -conf /etc/dns-over-https/doh-client.conf
-Restart=always
-RestartSec=2s
-LimitNPROC=1000000
-LimitNOFILE=1000000
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload > /dev/null 2>&1
-systemctl restart doh-client > /dev/null 2>&1
-systemctl enable doh-client > /dev/null 2>&1
-}
-
-
-
-function installv2ray(){
-cd ~
-mkdir -p /usr/bin/vtrui
-mkdir -p /etc/vtrui
-
-if [[ $architecture = "arm64" ]]; then
-    wget -O ~/vtrui.zip https://$mirrorsite/vtarm64.zip
-elif [[ $architecture = "amd64" ]]; then
-    wget -O ~/vtrui.zip https://$mirrorsite/vtamd64.zip
-fi
-unzip vtrui.zip
-mv -f ~/vtrui/vtrui /usr/bin/vtrui/vtrui
-mv -f ~/vtrui/v2ctl /usr/bin/vtrui/v2ctl
-mv -f ~/vtrui/geoip.dat /usr/bin/vtrui/geoip.dat
-rm -rf ~/vtrui*
-chmod +x /usr/bin/vtrui/vtrui
-chmod +x /usr/bin/vtrui/v2ctl
-
-cat > /etc/vtrui/config.json << EOF
-{
-"dns": {
-  "tag": "flow",
-  "hosts": {
-    "localhost": "127.0.0.1"
-  },
-  "servers": [
-    {
-      "address": "127.0.0.1",
-      "port": 5380
-    }
-  ]
-},
-"inbounds": [
-  {
-    "tag": "dnsin",
-    "port": 53,
-    "listen": "0.0.0.0",
-    "protocol": "dokodemo-door",
-    "settings": { "network": "tcp,udp", "address": "0.0.0.0", "port": 53 }
-  },
-  {
-    "port": 9896,
-    "listen": "127.0.0.1",
-    "protocol": "dokodemo-door",
-    "settings": { "network": "tcp,udp", "followRedirect": true },
-    "streamSettings": { "sockopt": { "tproxy": "tproxy" } }
-  }
-],
-"outbounds": [
-  {
-    "protocol": "vmess",
-    "settings": {
-      "vnext": [
-        {
-          "address": "xxxx.ooo",
-          "port": 443,
-          "users": [
-            {
-              "id": "00000000-0000-0000-0000-000000000000",
-              "level": 1,
-              "alterId": 4,
-              "security": "auto"
-            }
-          ]
-        }
-      ]
-    },
-    "streamSettings": {
-      "network": "ws",
-      "wsSettings": {
-        "path": "/000000",
-        "headers": {
-          "Host": "xxxx.ooo"
-        }
-      },
-      "security": "tls",
-      "tlsSettings": {
-        "serverName": "xxxx.ooo",
-        "allowInsecure": false
-      },
-      "sockopt": {
-        "mark": 255
-      }
-    }
-  },
-  { "tag": "direct", "protocol": "freedom", "streamSettings": { "sockopt": { "mark": 255 } } },
-  { "tag": "dnsout", "protocol": "dns"}
-],
-"routing": {
-  "domainStrategy": "IPOnDemand",
-  "rules": [
-    { "type": "field", "inboundTag": "dnsin", "outboundTag": "dnsout" },
-    { "type": "field", "inboundTag": "flow", "outboundTag": "direct" },
-    { "type": "field", "ip": [ "geoip:private", "geoip:cn", "114.114.114.114", "114.114.115.115", "119.29.29.29", "119.28.28.28", "223.5.5.5", "223.6.6.6" ], "outboundTag": "direct" }
-  ]
-}
-}
-EOF
-
-portcheck=$(echo $port | grep '^[0-9]\+$')
-if [[ $portcheck = "" ]]; then
-port="443"
-fi
-
-jq --arg domain "$domain" '.outbounds[0].settings.vnext[0].address=$domain' /etc/vtrui/config.json |\
-jq --argjson port "$port" '.outbounds[0].settings.vnext[0].port=$port' |\
-jq --arg uuidnum "$uuidnum" '.outbounds[0].settings.vnext[0].users[0].id=$uuidnum' |\
-jq --arg v2path "$v2path" '.outbounds[0].streamSettings.wsSettings.path=$v2path' |\
-jq --arg domain "$domain" '.outbounds[0].streamSettings.wsSettings.headers.Host=$domain' |\
-jq --arg domain "$domain" '.outbounds[0].streamSettings.tlsSettings.serverName=$domain' |\
-jq --arg key $doh --arg value $domainip '.dns.hosts += {($key): ($value)}' |\
-jq --arg key $domain --arg value $domainip '.dns.hosts += {($key): ($value)}' > /etc/vtrui/temp.json && mv -f /etc/vtrui/temp.json /etc/vtrui/config.json
-
-cat > /etc/systemd/system/vtrui.service << EOF
-[Unit]
-Description=vtrui Service
-After=network-online.target
-Wants=network-online.target
-[Service]
-Type=simple
-PIDFile=/run/vtrui.pid
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-ExecStart=/usr/bin/vtrui/vtrui -config /etc/vtrui/config.json
-Restart=always
-RestartSec=2s
-LimitNPROC=1000000
-LimitNOFILE=1000000
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload > /dev/null 2>&1
-systemctl restart vtrui > /dev/null 2>&1
-systemctl enable vtrui > /dev/null 2>&1
-}
-
 
 
 function installiptablesproxy(){
@@ -428,7 +192,7 @@ iptables -t mangle -A V2PROXY -p tcp --dport 5380 -j ACCEPT
 iptables -t mangle -A V2PROXY -p udp --dport 5380 -j ACCEPT
 iptables -t mangle -A V2PROXY -p tcp --dport 5390 -j ACCEPT
 iptables -t mangle -A V2PROXY -p udp --dport 5390 -j ACCEPT
-iptables -t mangle -A V2PROXY -p udp --dport 49894 -j ACCEPT
+iptables -t mangle -A V2PROXY -p udp --dport 9895 -j ACCEPT
 iptables -t mangle -A V2PROXY -m set --match-set hosts dst -j ACCEPT
 iptables -t mangle -A V2PROXY -m set --match-set lanip dst -j ACCEPT
 iptables -t mangle -A V2PROXY -m set --match-set listwlan src -j ACCEPT
@@ -440,8 +204,8 @@ iptables -t mangle -A OUTPUT -p tcp -j V2PROXY
 iptables -t mangle -A OUTPUT -p udp -j V2PROXY
 iptables -t mangle -A PREROUTING -p tcp -m mark ! --mark 0x9 -j V2PROXY
 iptables -t mangle -A PREROUTING -p udp -m mark ! --mark 0x9 -j V2PROXY
-iptables -t mangle -A PREROUTING -p tcp -j TPROXY --on-ip 127.0.0.1 --on-port 9896 --tproxy-mark 0x9
-iptables -t mangle -A PREROUTING -p udp -j TPROXY --on-ip 127.0.0.1 --on-port 9896 --tproxy-mark 0x9
+iptables -t mangle -A PREROUTING -p tcp -j TPROXY --on-ip 127.0.0.1 --on-port 12345 --tproxy-mark 0x9
+iptables -t mangle -A PREROUTING -p udp -j TPROXY --on-ip 127.0.0.1 --on-port 12345 --tproxy-mark 0x9
 systemctl restart doh-client
 systemctl restart vtrui
 if [[ $(ip --oneline link show up | grep -v "lo" | awk '{print $2}') =~ "wg0" ]]; then
@@ -486,31 +250,17 @@ EOF
 systemctl daemon-reload > /dev/null 2>&1
 systemctl restart iptables-proxy > /dev/null 2>&1
 systemctl enable iptables-proxy > /dev/null 2>&1
+}
 
-rm -rf /etc/resolv.conf
 
+
+function installwg(){
 cat > /etc/resolv.conf << EOF
 nameserver 127.0.0.1
 nameserver 1.1.1.1
 nameserver 8.8.8.8
 EOF
 
-echo
-if [[ $(curl -4skI -o /dev/null -w %{http_code} www.google.com | awk 'NR==1{print $1}') =~ "20" ]]; then
-    echo "$statusuccess de_GWD server access"
-    echo "$statusuccess de_GWD server access"
-    echo "$statusuccess de_GWD server access"
-else
-    echo "$statusfailed de_GWD server access"
-    echo "$statusfailed de_GWD server access"
-    echo "$statusfailed de_GWD server access"
-fi
-echo
-}
-
-
-
-function installwg(){
 if [[ $architecture = "amd64" ]]; then
 cat > /etc/apt/sources.list << EOF
 deb http://deb.debian.org/debian buster main
@@ -533,204 +283,6 @@ elif [[ $architecture = "amd64" ]]; then
 apt install -y wireguard-dkms wireguard-tools
 fi
 }
-
-
-
-function installpihole(){
-if [[ $architecture = "arm64" ]]; then
-  wget -O ~/smartdns.deb $smartdns_arm64
-elif [[ $architecture = "amd64" ]]; then
-  wget -O ~/smartdns.deb $smartdns_amd64
-fi
-
-dpkg -i smartdns.deb
-
-cat > /etc/smartdns/smartdns.conf << EOF
-bind 127.0.0.1:5370
-cache-size 1024
-prefetch-domain yes
-speed-check-mode tcp:80,ping
-force-AAAA-SOA yes
-server 114.114.114.114
-server 114.114.115.115
-server 119.29.29.29
-server 119.28.28.28
-server 223.5.5.5
-server 223.6.6.6
-EOF
-
-rm -rf /lib/systemd/system/smartdns.service
-
-cat > /etc/systemd/system/smartdns.service << "EOF"
-[Unit]
-Description=Smart DNS server
-After=network-online.target
-Before=nss-lookup.target
-Wants=network-online.target
-[Service]
-Type=forking
-PIDFile=/run/smartdns.pid
-EnvironmentFile=/etc/default/smartdns
-ExecStart=/usr/sbin/smartdns $SMART_DNS_OPTS
-KillMode=process
-Restart=always
-RestartSec=2s
-LimitNPROC=1000000
-LimitNOFILE=1000000
-[Install]
-WantedBy=multi-user.target
-EOF
-
-rm -rf ~/smartdns.deb
-
-systemctl daemon-reload > /dev/null 2>&1
-systemctl restart smartdns > /dev/null 2>&1
-systemctl enable smartdns > /dev/null 2>&1
-
-echo "" > /etc/pihole/adlists.list
-
-cat > /etc/pihole/setupVars.conf << EOF
-PIHOLE_INTERFACE=$ethernetnum
-IPV4_ADDRESS=$localaddr/24
-IPV6_ADDRESS=
-PIHOLE_DNS_1=127.0.0.1#5380
-QUERY_LOGGING=true
-INSTALL_WEB_SERVER=true
-INSTALL_WEB_INTERFACE=true
-LIGHTTPD_ENABLED=true
-BLOCKING_ENABLED=true
-WEBPASSWORD=$piholepw
-DNSMASQ_LISTENING=single
-DNS_FQDN_REQUIRED=true
-DNS_BOGUS_PRIV=true
-DNSSEC=false
-CONDITIONAL_FORWARDING=true
-CONDITIONAL_FORWARDING_IP=$localaddr
-CONDITIONAL_FORWARDING_DOMAIN=lan
-EOF
-
-git clone --depth 1 https://github.com/pi-hole/pi-hole.git Pi-hole
-bash ~/Pi-hole/"automated install"/basic-install.sh /dev/stdin --unattended
-rm -rf ~/Pi-hole
-
-systemctl mask --now dhcpcd > /dev/null 2>&1
-systemctl daemon-reload > /dev/null 2>&1
-
-cat > /usr/local/bin/pihole_hotfix << "EOF"
-#!/bin/bash
-ipgateway=$(awk '/IPV4_ADDRESS/' /etc/pihole/setupVars.conf | cut -d = -f2 | cut -d / -f1)
-sed -i "/dhcp-option=/c\dhcp-option=6,$ipgateway,$ipgateway" /etc/dnsmasq.d/02-pihole-dhcp.conf
-pihole restartdns
-EOF
-
-chmod +x /usr/local/bin/pihole_hotfix
-
-sed -i '/pihole_hotfix/d' /var/www/html/admin/scripts/pi-hole/php/savesettings.php
-sed -i "/sudo pihole -a enabledhcp/a\exec('sudo /usr/local/bin/pihole_hotfix');" /var/www/html/admin/scripts/pi-hole/php/savesettings.php
-
-cat > /etc/dnsmasq.conf << EOF
-conf-dir=/etc/dnsmasq.d
-port=5390
-EOF
-
-cat > /etc/pihole/dns-servers.conf << EOF
- DoH;127.0.0.1#5380
-EOF
-
-sed -i '/PIHOLE_DNS/d' /etc/pihole/setupVars.conf
-sed -i '/IPV6_ADDRESS=/a\PIHOLE_DNS_1=127.0.0.1#5380' /etc/pihole/setupVars.conf
-sed -i '/server=/d' /etc/dnsmasq.d/01-pihole.conf
-sed -i '/interface=/i\server=127.0.0.1#5380' /etc/dnsmasq.d/01-pihole.conf
-
-pihole -f
-}
-
-
-
-function postinstall(){
-cat > /usr/local/bin/updateGWD << "EOF"
-#!/bin/bash
-wget https://raw.githubusercontent.com/jacyl4/de_GWD/master/resource/dlc.dat
-wget https://raw.githubusercontent.com/ToutyRater/V2Ray-SiteDAT/master/geofiles/h2y.dat                
-mv -f ~/dlc.dat /usr/bin/vtrui/geosite.dat
-mv -f ~/h2y.dat /usr/bin/vtrui/h2y.dat
-curl 'http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest' | grep ipv4 | grep CN | awk -F\| '{ printf("%s/%d\n", $4, 32-log($5)/log(2)) }' > ~/chnroute.txt
-mv -f ~/chnroute.txt /usr/local/bin/chnroute.txt
-{
-echo "create chnroute hash:net family inet hashsize 2048 maxelem 65535"
-chnroute=`cat /usr/local/bin/chnroute.txt`
-for chnroute in $chnroute ; do
- echo "add chnroute $chnroute"
-done
-} > /usr/local/bin/chnrouteset
-ipset -F chnroute
-for ipchnroute in $(cat /usr/local/bin/chnroute.txt); do
-  ipset add chnroute $ipchnroute
-done
-EOF
-chmod +x /usr/local/bin/updateGWD
-/usr/local/bin/updateGWD
-
-cat > /usr/local/bin/clearcache << "EOF"
-#!/bin/bash
-date -s "$(wget -qSO- --max-redirect=0 google.com 2>&1 | grep Date: | cut -d' ' -f5-8)Z"
-hwclock -w
-rm -rf ~/client
-rm -rf /var/log/*1*
-rm -rf /var/log/*2*
-rm -rf /var/log/*.gz
-rm -rf /tmp/nodecheck*
-rm -rf /var/www/html/log.log
-EOF
-chmod +x /usr/local/bin/clearcache
-/usr/local/bin/clearcache
-
-cat > ~/now.cron << EOF
-0 4 * * * /usr/local/bin/updateGWD
-0 */4 * * * /usr/local/bin/clearcache
-EOF
-crontab ~/now.cron
-rm -rf ~/now.cron
-
-svn export https://github.com/jacyl4/de_GWD/trunk/resource/ui-script
-svn export https://github.com/jacyl4/de_GWD/trunk/resource/ui-web
-
-mkdir -p /var/www/html/restore
-chown -R www-data:www-data /var/www/html/restore
-chown -R www-data:www-data /var/www/html/*.txt
-
-rsync -r ~/ui-script/* /usr/local/bin
-chmod +x /usr/local/bin/*
-rsync -r ~/ui-web/* /var/www/html
-rm -rf ~/ui-*
-
-wget https://raw.githubusercontent.com/jacyl4/de_GWD/master/version.php
-mv -f ~/version.php /var/www/html/version.php
-
-mkdir -p /var/www/html/ariang
-cd ~
-wget -q $ariang
-
-unzip AriaNg-*
-
-mv -f index.html /var/www/html/ariang
-
-rm -rf AriaNg*
-rm -rf index.html
-rm -rf LICENSE
-
-/usr/local/bin/ui-nodedthide >/dev/null 2>&1
-/usr/local/bin/ui-nodenslookup >/dev/null 2>&1
-/usr/local/bin/ui-changedoh >/dev/null 2>&1
-
-if [[ ! -f "/etc/wireguard/sprivatekey" ]]; then
-mkdir -p /etc/wireguard
-/usr/local/bin/ui-wgchangekey >/dev/null 2>&1
-fi
-
-sed -i "/$doh/d" /etc/hosts
-}
-
 
 
 installgwd(){
@@ -765,13 +317,8 @@ domain=$(echo $v2servn | cut -d : -f1)
 port=$(echo $v2servn | cut -d : -f2)
 ethernetnum=$(ip --oneline link show up | grep -v "lo" | awk '{print $2}' | cut -d':' -f1 | cut -d'@' -f1 | awk 'NR==1{print}')
 
-piholepw="0000000000000000000000000000000000000000000000000000000000000000"
-
 preinstall
 
-installdoh
-
-installv2ray
 
 echo "create chnroute hash:net family inet hashsize 2048 maxelem 65535" > /usr/local/bin/chnrouteset
 
@@ -779,9 +326,6 @@ installiptablesproxy
 
 installwg
 
-mkdir -p /etc/pihole
-
-installpihole
 
 sed -i "/static ip_address=/d" /etc/dhcpcd.conf
 sed -i "/static routers=/d" /etc/dhcpcd.conf
@@ -802,18 +346,14 @@ iface $ethernetnum inet static
   gateway $gatewayaddr
 EOF
 
-pihole restartdns
 
 sed -i "/Allow members of group sudo to execute any command/a\www-data ALL=(root)  NOPASSWD:ALL" /etc/sudoers
 
-echo $v2servn > /var/www/html/doh.txt
-echo $v2servn >> /var/www/html/doh.txt
 echo $v2servn > /var/www/html/nodename.txt
 echo $v2servn > /var/www/html/domain.txt
 echo $uuidnum > /var/www/html/uuid.txt
 echo $v2path > /var/www/html/path.txt
 
-postinstall
 
 blue "----------------------"
 blue  "Install de_GWD [done]"
@@ -821,77 +361,9 @@ blue "----------------------"
 }
 
 
-
-change_piholeadmin(){
-pihole -a -p
-blue "-------------------------------"
-blue  "Change Pi-hole password [done]"
-blue "-------------------------------"
-}
-
-
-
-updategwd(){
-source /etc/profile
-
-testdns=$(/usr/local/bin/ui-testdns)
-dhcpcheck=$(/usr/local/bin/ui-dhcpcheck)
-ddnscheck=$(/usr/local/bin/ui-ddnscheck)
-wgcheck=$(/usr/local/bin/ui-wgcheck)
-
-piholepw=$(awk '/WEBPASSWORD/' /etc/pihole/setupVars.conf | cut -d = -f2)
-
-domain=$(jq -r '.outbounds[0].settings.vnext[0].address' /etc/vtrui/config.json)
-port=$(jq -r '.outbounds[0].settings.vnext[0].port' /etc/vtrui/config.json)
-uuidnum=$(jq -r '.outbounds[0].settings.vnext[0].users[0].id' /etc/vtrui/config.json)
-v2path=$(jq -r '.outbounds[0].streamSettings.wsSettings.path' /etc/vtrui/config.json)
-
-localaddr=$(ifconfig -a | grep inet | grep -v 127.0.0.1 | grep -v inet6 | awk '{print $2}' | awk 'NR==1{print}')
-ethernetnum=$(ip --oneline link show up | grep -v "lo" | awk '{print $2}' | cut -d':' -f1 | cut -d'@' -f1 | awk 'NR==1{print}')
-
-cd ~
-
-preinstall
-
-installdoh
-
-#installv2ray
-
-installiptablesproxy
-
-installwg
-
-installpihole
-
-postinstall
-
-if [[ $testdns = "GFWlist" ]]; then
-/usr/local/bin/ui-changegfwl
-else
-/usr/local/bin/ui-changechnwl
-fi
-
-if [[ $dhcpcheck = "on" ]]; then
-/usr/local/bin/ui-dhcpup
-fi
-
-if [[ $ddnscheck = "cfon" ]]; then
-/usr/local/bin/ui-ddnsupdateoncf
-fi
-
-if [[ $wgcheck = "on" ]]; then
-/usr/local/bin/ui-wgup
-fi
-
-blue "---------------------"
-blue  "Update de_GWD [done]"
-blue "---------------------"
-}
-
-
 start_menu(){
-statusgod=$(green "✓")
-statusbad=$(red "x")
+statusgod=$(green "✔︎")
+statusbad=$(red "✘")
 
 if [[ $(systemctl is-active doh-client) = "active" ]]; then
     echo "[$statusgod] DoH client     [working]"
@@ -928,11 +400,11 @@ else
     echo "[$statusbad] Pi-hole        [start failed]"
 fi
 
-    green "===================================="
-    green "                CLIENT               "
-    green "Recommend: Debian 10 (amd64 & arm64) "
-    green "Author:    JacyL4                    "
-    green "===================================="
+    green "======================================="
+    green "                  CLIENT               "
+    green "Require: only Debian 10 (amd64 & arm64) "
+    green "Author:  JacyL4                         "
+    green "======================================="
     echo
     green  "1. Install de_GWD"
     green  "2. Change de_GWD password"
